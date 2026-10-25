@@ -4,27 +4,78 @@
 
 CC := gcc
 
-CFLAGS := -O2 -Wall -Wextra -Iinclude
-LDFLAGS := -Llib
+SRC := $(wildcard src/*.c)
+OBJ := $(patsubst src/%.c,build/%.o,$(SRC))
+
+QDBMP_SRC := include/QDBMP/qdbmp.c
+QDBMP_OBJ := build/qdbmp.o
+
+OBJ += $(QDBMP_OBJ)
+
+
+CPPFLAGS := -Iinclude
+CFLAGS := -std=c11 -O2 -Wall -Wextra
 LDLIBS := -lOpenCL
 
-TARGET := opencl_test.exe
 
-SOURCES := $(wildcard src/*.c)
-OBJECTS := $(SOURCES:.c=.o)
+# ------------------------------------------------------------
+# Platform-specific settings
+# ------------------------------------------------------------
+
+ifeq ($(OS),Windows_NT)
+
+    TARGET := opencl.exe
+
+    LDFLAGS := -Llib
+
+    MKDIR := C:/msys64/usr/bin/mkdir.exe
+    RM := C:/msys64/usr/bin/rm.exe
+
+else
+
+    TARGET := opencl
+
+    LDFLAGS :=
+
+    MKDIR := mkdir
+    RM := rm
+
+endif
+
+
+# ------------------------------------------------------------
+# Build
+# ------------------------------------------------------------
 
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) $(LDFLAGS) $(LDLIBS) -o $@
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+$(TARGET): $(OBJ)
+	$(CC) $(OBJ) $(LDFLAGS) $(LDLIBS) -o $@
 
-clean:
-	rm -f $(OBJECTS) $(TARGET)
+
+build/%.o: src/%.c | build
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+
+$(QDBMP_OBJ): $(QDBMP_SRC) | build
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+
+build:
+	$(MKDIR) -p build
+
 
 run: $(TARGET)
 	./$(TARGET)
 
-.PHONY: all clean run
+
+clean:
+	$(RM) -rf build
+	$(RM) -f $(TARGET)
+
+
+rebuild: clean all
+
+
+.PHONY: all run clean rebuild
