@@ -12,13 +12,14 @@ int main(int argc, char** argv)
     parse_args(argc, argv, &args);
 
     BMP* bmp;
-    unsigned long width, height;
 
     bmp = BMP_ReadFile(args.in_file);
     BMP_CHECK_ERROR(stderr, 1);
 
-    width = BMP_GetWidth(bmp);
-    height = BMP_GetHeight(bmp);
+    unsigned int width, height;
+
+    width = (unsigned int)BMP_GetWidth(bmp);
+    height = (unsigned int)BMP_GetHeight(bmp);
 
     unsigned char *r_buf = malloc(sizeof(unsigned char) * (int)width * (int)height);
     unsigned char *g_buf = malloc(sizeof(unsigned char) * (int)width * (int)height);
@@ -30,6 +31,10 @@ int main(int argc, char** argv)
         }
     }
 
+    host_buffer_t host_buffer;
+    host_buffer.data = r_buf;
+    host_buffer.width = width;
+    host_buffer.height = height;
 
     // OpenCL init
 
@@ -82,40 +87,42 @@ int main(int argc, char** argv)
 
     // Create kernel input buffers
 
-    long n = (int)width * (int)height;
+    kernel_buffer_t kernel_input_buffer;
+    init(&kernel_input_buffer, &host_buffer);
+    prepare_for_lifting(&kernel_input_buffer, 0);
+    prepare_for_lifting(&kernel_input_buffer, 1);
 
-    cl_uint width_cl = 2593;
-    size_t height_cl = 1944;
+    kernel_buffer_t kernel_output_buffer;
+    init(&kernel_output_buffer, &host_buffer);
+    prepare_for_lifting(&kernel_output_buffer, 0);
+    prepare_for_lifting(&kernel_output_buffer, 1);
 
-    cl_int *input_clint = uchar_to_clint(n, mirror_right((int)width, (int)height, r_buf));
-    cl_int *output_clint = malloc(sizeof(cl_int) * (n + height));
-
-    size_t count = (size_t)width * height;
-    size_t bytes = count * sizeof(cl_int);
+    size_t count = (size_t)kernel_input_buffer.width * (size_t)kernel_input_buffer.height;
+    size_t bytes = count * sizeof(cl_short);
 
     cl_mem buffer_input =
         clCreateBuffer(
             context,
             CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
             bytes,
-            (void*)input_clint,
+            (void*)kernel_input_buffer.data,
             &error
         );
 
-    check(error, "clCreateBuffer(r_buf)");
+    check(error, "clCreateBuffer(kernel_input_buffer.data)");
 
     cl_mem buffer_output =
         clCreateBuffer(
             context,
             CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
             bytes,
-            (void*)output_clint,
+            (void*)kernel_output_buffer.data,
             &error
         );
 
-    check(error, "clCreateBuffer(output)");
+    check(error, "clCreateBuffer(kernel_output_buffer.data)");
 
-    
+
     // Create kernel
 
     char *source =
@@ -178,17 +185,39 @@ int main(int argc, char** argv)
             kernel,
             2,
             sizeof(cl_uint),
-            &width_cl
+            &kernel_input_buffer.width
         ),
         "clSetKernelArg(2)"
+    );
+
+    check(
+        clSetKernelArg(
+            kernel,
+            3,
+            sizeof(cl_uint),
+            &kernel_input_buffer.height
+        ),
+        "clSetKernelArg(3)"
+    );
+
+    cl_uint axis = 0;
+
+    check(
+        clSetKernelArg(
+            kernel,
+            4,
+            sizeof(cl_uint),
+            &axis
+        ),
+        "clSetKernelArg(4)"
     );
 
 
     // Launch kernel
 
-    size_t global_size[2] = {
-        (width_cl + 1) / 2,
-        height_cl
+    size_t global_h[2] = {
+        (kernel_input_buffer.width + 1) / 2,
+        kernel_input_buffer.height
     };
 
     check(
@@ -197,7 +226,59 @@ int main(int argc, char** argv)
             kernel,
             2,
             NULL,
-            global_size,
+            global_h,
+            NULL,
+            0,
+            NULL,
+            NULL
+        ),
+        "clEnqueueNDRangeKernel"
+    );
+
+    axis = 1;
+
+    size_t global_v[2] = {
+        kernel_input_buffer.width,
+        (kernel_input_buffer.height + 1) / 2
+    };
+
+    check(
+        clSetKernelArg(
+            kernel,
+            0,
+            sizeof(cl_mem),
+            &buffer_output
+        ),
+        "clSetKernelArg(0)"
+    );
+
+    check(
+        clSetKernelArg(
+            kernel,
+            1,
+            sizeof(cl_mem),
+            &buffer_input
+        ),
+        "clSetKernelArg(1)"
+    );
+
+    check(
+        clSetKernelArg(
+            kernel,
+            4,
+            sizeof(cl_uint),
+            &axis
+        ),
+        "clSetKernelArg(4)"
+    );
+
+    check(
+        clEnqueueNDRangeKernel(
+            queue,
+            kernel,
+            2,
+            NULL,
+            global_v,
             NULL,
             0,
             NULL,
@@ -207,18 +288,16 @@ int main(int argc, char** argv)
     );
 
 
-
-
     // Copy results
 
     check(
         clEnqueueReadBuffer(
             queue,
-            buffer_output,
+            buffer_input,
             CL_TRUE,
             0,
             bytes,
-            output_clint,
+            kernel_output_buffer.data,
             0,
             NULL,
             NULL
@@ -226,11 +305,11 @@ int main(int argc, char** argv)
         "clEnqueueReadBuffer"
     );
 
-    unsigned char *output_char = crop_right((int)width, (int)height, clint_to_uchar(n, output_clint));
+    update(&host_buffer, &kernel_output_buffer);
 
     for (unsigned long x = 0; x < width; x++) {
         for (unsigned long y = 0; y < height; y++) {
-            BMP_SetPixelRGB(bmp, x, y, output_char[x + y*width], 0, 0);
+            BMP_SetPixelRGB(bmp, x, y, host_buffer.data[x + y*width], 0, 0);
         }
     }
 

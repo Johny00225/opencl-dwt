@@ -32,8 +32,4 @@ void parse_args(int argc, char **argv, args_t *args);
 char *read_file(const char *filename);
 
 
-void split(const long n, const char *in, char **out_even, char **out_odd);
-unsigned char *mirror_right(const int width, const int height, const unsigned char *in);
-unsigned char *crop_right(const int width, const int height, const unsigned char *in);
-
 #endif

@@ -7,6 +7,7 @@
 #define _MAIN_HEADER
 
 
+#include "dwt.h"
 #include "utils.h"
 #include "utils_opencl.h"
 

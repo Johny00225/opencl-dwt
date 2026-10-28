@@ -9,10 +9,11 @@
 
 #define CL_TARGET_OPENCL_VERSION 120
 
-#include "CL/opencl.h"
-
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "CL/opencl.h"
+#include "utils.h"
 
 
 void check(cl_int error, const char *operation);
