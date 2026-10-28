@@ -6,7 +6,8 @@
 #include "utils.h"
 
 
-void print_help(char *program) {
+void print_help(char *program)
+{
     fprintf(
         stdout,
         "Usage: %s [-h | --help] | [-i <input file> -o <output file>]\n",
@@ -16,7 +17,8 @@ void print_help(char *program) {
 }
 
 
-void parse_args(int argc, char **argv, args_t *args) {
+void parse_args(int argc, char **argv, args_t *args)
+{
     if (argc > 5) {
         exit(EXIT_FAILURE);
     }
@@ -41,7 +43,8 @@ void parse_args(int argc, char **argv, args_t *args) {
 }
 
 
-char *read_file(const char *filename) {
+char *read_file(const char *filename)
+{
     FILE *file = fopen(filename, "rb");
 
     if (!file) {
@@ -69,7 +72,8 @@ char *read_file(const char *filename) {
 }
 
 
-void split(const long n, const char *in, char **out_even, char **out_odd) {
+void split(const long n, const char *in, char **out_even, char **out_odd)
+{
     if (n%2 == 0) {
         *out_even = malloc(sizeof(char) * (n/2));
         *out_odd = malloc(sizeof(char) * (n/2));
@@ -94,9 +98,8 @@ void split(const long n, const char *in, char **out_even, char **out_odd) {
 }
 
 
-unsigned char *mirror_right(const int width, const int height, const unsigned char *in) {
-    if (width % 2 == 1) return NULL;
-    
+unsigned char *mirror_right(const int width, const int height, const unsigned char *in)
+{
     unsigned char *out = malloc(sizeof(char) * (width + 1) * height);
 
     for (int y = 0; y < height; y++) {
@@ -104,6 +107,19 @@ unsigned char *mirror_right(const int width, const int height, const unsigned ch
             out[y * (width + 1) + x] = in[y * width + x];
         }
         out[(y + 1) * (width + 1)] = in[(y + 1) * width - 2];
+    }
+
+    return out;
+}
+
+unsigned char *crop_right(const int width, const int height, const unsigned char *in)
+{
+    unsigned char *out = malloc(sizeof(char) * width * height);
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            out[y * width + x] = in[y * (width + 1) + x];
+        }
     }
 
     return out;

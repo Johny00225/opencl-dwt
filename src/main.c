@@ -87,8 +87,8 @@ int main(int argc, char** argv)
     cl_uint width_cl = 2593;
     size_t height_cl = 1944;
 
-    cl_int *input = uchar_to_clint(n, mirror_right((int)width, (int)height, r_buf));
-    cl_int *output = malloc(sizeof(cl_int) * (n + height));
+    cl_int *input_clint = uchar_to_clint(n, mirror_right((int)width, (int)height, r_buf));
+    cl_int *output_clint = malloc(sizeof(cl_int) * (n + height));
 
     size_t count = (size_t)width * height;
     size_t bytes = count * sizeof(cl_int);
@@ -98,7 +98,7 @@ int main(int argc, char** argv)
             context,
             CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
             bytes,
-            (void*)input,
+            (void*)input_clint,
             &error
         );
 
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
             context,
             CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
             bytes,
-            (void*)output,
+            (void*)output_clint,
             &error
         );
 
@@ -218,7 +218,7 @@ int main(int argc, char** argv)
             CL_TRUE,
             0,
             bytes,
-            output,
+            output_clint,
             0,
             NULL,
             NULL
@@ -226,12 +226,11 @@ int main(int argc, char** argv)
         "clEnqueueReadBuffer"
     );
 
-
-
+    unsigned char *output_char = crop_right((int)width, (int)height, clint_to_uchar(n, output_clint));
 
     for (unsigned long x = 0; x < width; x++) {
         for (unsigned long y = 0; y < height; y++) {
-            BMP_SetPixelRGB(bmp, x, y, output[x + y*width], 0, 0);
+            BMP_SetPixelRGB(bmp, x, y, output_char[x + y*width], 0, 0);
         }
     }
 

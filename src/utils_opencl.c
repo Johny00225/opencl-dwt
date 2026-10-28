@@ -6,7 +6,8 @@
 #include "utils_opencl.h"
 
 
-void check(cl_int error, const char *operation) {
+void check(cl_int error, const char *operation)
+{
     if (error != CL_SUCCESS) {
         fprintf(
             stderr,
@@ -20,7 +21,8 @@ void check(cl_int error, const char *operation) {
 }
 
 
-void find_platforms(cl_uint *platform_count, cl_platform_id **platforms) {
+void find_platforms(cl_uint *platform_count, cl_platform_id **platforms)
+{
     check(
         clGetPlatformIDs(
             0,
@@ -55,8 +57,8 @@ void find_gpu(
     cl_uint platform_count,
     cl_platform_id **platforms,
     cl_device_id *device,
-    cl_platform_id *selected_platform
-) {
+    cl_platform_id *selected_platform)
+{
     for (cl_uint i = 0; i < platform_count; ++i) {
 
         cl_uint device_count = 0;
@@ -100,7 +102,8 @@ void find_gpu(
 }
 
 
-void print_gpu_info(cl_platform_id selected_platform, cl_device_id device) {
+void print_gpu_info(cl_platform_id selected_platform, cl_device_id device)
+{
     char platform_name[256];
     char device_name[256];
 
@@ -131,7 +134,8 @@ void print_gpu_info(cl_platform_id selected_platform, cl_device_id device) {
 }
 
 
-void build_program(cl_int *error, cl_program *program, cl_device_id *device) {
+void build_program(cl_int *error, cl_program *program, cl_device_id *device)
+{
     *error =
         clBuildProgram(
             *program,
@@ -177,11 +181,23 @@ void build_program(cl_int *error, cl_program *program, cl_device_id *device) {
 }
 
 
-cl_int *uchar_to_clint(const long n, const unsigned char *in) {
+cl_int *uchar_to_clint(const long n, const unsigned char *in)
+{
     cl_int *out = malloc(sizeof(cl_int) * n);
     
     for (int i = 0; i < n; i++) {
         out[i] = (cl_int)in[i];
+    }
+
+    return out;
+}
+
+unsigned char *clint_to_uchar(const long n, const cl_int *in)
+{
+    unsigned char *out = malloc(sizeof(unsigned char) * n);
+    
+    for (int i = 0; i < n; i++) {
+        out[i] = (unsigned char)in[i];
     }
 
     return out;

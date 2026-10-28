@@ -28,5 +28,6 @@ void print_gpu_info(cl_platform_id selected_platform, cl_device_id device);
 void build_program(cl_int *error, cl_program *program, cl_device_id *device);
 
 cl_int *uchar_to_clint(const long n, const unsigned char *in);
+unsigned char *clint_to_uchar(const long n, const cl_int *in);
 
 #endif
